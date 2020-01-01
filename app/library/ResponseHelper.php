@@ -15,7 +15,6 @@ class ResponseHelper {
     {
         $response = new Response();
         $response->setContentType('application/json', 'UTF-8');
-        $response->setStatusCode($e->getStatusCode());
         $response->setContent($e->getMessage());
         return $response;
     }

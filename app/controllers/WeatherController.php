@@ -7,6 +7,14 @@ use ResponseHelper;
 
 class WeatherController extends \Phalcon\Mvc\Controller
 {
+    public $responseHelper;
+
+    public function initialize()
+    {
+        $this->responseHelper = new ResponseHelper();
+    }
+
+    
     public function indexAction()
     {
         $request = new Request();
@@ -17,20 +25,21 @@ class WeatherController extends \Phalcon\Mvc\Controller
             if ($latitude && $longitude && Cities::valid()) {
                 $reFormatLatitude = explode('.', $latitude);
                 $reFormatLongitude = explode('.', $longitude);
+                return $this->responseHelper->createResponse($this->getWeatherByData(false, $reFormatLatitude[0], $reFormatLongitude[0]));
             }
-            return ResponseHelper::createResponse($this->getWeatherByData($name, $reFormatLatitude[0], $reFormatLongitude[0]));
+            return $this->responseHelper->createResponse($this->getWeatherByData($name, false, false));
         }
     }
 
-    // Get list cities from db , error handing
+    // Get list cities from db 
     public function getWeatherAction()
     {
         try {
             $query = $this->modelsManager->createQuery('SELECT cities.city FROM cities WHERE cities.session_id = :session_id:');
             $list = $query->execute([ 'session_id' => $this->session->getId() ]);
-            return ResponseHelper::createResponse(json_encode($list));
+            return  $this->responseHelper->createResponse(json_encode($list));
         } catch(Exception $e) {
-            return ResponseHelper::errorHandler($e);
+            return  $this->responseHelper->errorHandler($e);
         }
     }
 
@@ -99,7 +108,7 @@ class WeatherController extends \Phalcon\Mvc\Controller
             //Save in redis
             $this->redis->set($name, $res);
         } catch (Exception $e) {
-            return ResponseHelper::errorHandler($e);
+            return  $this->responseHelper->errorHandler($e);
         }
 
     }
