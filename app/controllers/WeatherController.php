@@ -76,14 +76,12 @@ class WeatherController extends \Phalcon\Mvc\Controller
     {
         if ($name) {
             strtolower($name);
-            if ($this->redis->get($name)) {
-                return json_decode($this->redis->get($name));
-            }
+            if ($this->redis->get($name)) return json_decode($this->redis->get($name));
+            
             return $this->reqWeatherApi($name);
         }
-        if ($this->redis->get("$latitude,$longitude")) {
-            return json_decode($this->redis->get("$latitude,$longitude"));
-        }
+        if ($this->redis->get("$latitude,$longitude")) json_decode($this->redis->get("$latitude,$longitude"));
+        
         return $this->reqWeatherApi(null, $latitude, $longitude);
     }
 
@@ -108,21 +106,23 @@ class WeatherController extends \Phalcon\Mvc\Controller
         curl_setopt($curl, CURLOPT_HEADER, false);
         $res = curl_exec($curl);
         if ($name != null) {
-            $this->saveCity($name);
-            $this->redis->set($name, json_encode($res)); // redis cache 
+            $this->saveCity($name, json_encode($res));
             return $res;
         }
-        $this->saveCity("$latitude,$longitude");
-        $this->redis->set("$latitude,$longitude", json_encode($res)); // redis cache
+        $this->saveCity("$latitude,$longitude", json_encode($res));
         return $res;
     }
 
-    protected function saveCity($name)
+    protected function saveCity($name, $res)
     {
+        //Save in db
         $newCity = new Cities;
         $newCity->session_id =  $this->session->getId();
         $newCity->city = $name;
         $newCity->save();
+        //Save in redis
+        $this->redis->set($name, json_encode($res));
+
     }
 
     public function getWeatherAction()
