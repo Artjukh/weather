@@ -54,13 +54,15 @@ class WeatherController extends \Phalcon\Mvc\Controller
     {
         if ($name) {
             strtolower($name);
-            if ($this->redis->get($name)) {
-                return json_decode($this->redis->get($name));
+            if ($this->redis->get($name) && $this->checkTimeWeather($name)) {
+                $arrCache = json_decode($this->redis->get($name));
+                return $arrCache[0];
             }
             return $this->reqWeatherApi($name);
         }
-        if ($this->redis->get("$latitude,$longitude")) {
-            return json_decode($this->redis->get("$latitude,$longitude"));
+        if ($this->redis->get("$latitude,$longitude") && $this->checkTimeWeather($name)) {
+            $arrCache = json_decode($this->redis->get("$latitude,$longitude"));
+            return $arrCache[0];
         }
         return $this->reqWeatherApi(false, $latitude, $longitude);
     }
@@ -89,13 +91,22 @@ class WeatherController extends \Phalcon\Mvc\Controller
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HEADER, false);
         $res = curl_exec($curl);
+        $json = json_decode($res);
         curl_close($curl);
         if ($name) {
-            $this->saveCity($name, json_encode($res));
+            $this->saveCity($name, json_encode([$res]));
             return $res;
         }
-        $this->saveCity("$latitude,$longitude", json_encode($res));
+        $this->saveCity("$latitude,$longitude", json_encode([$res]));
         return $res;
+    }
+
+    protected function checkTimeWeather($name)
+    {
+        $arrCache = json_decode($this->redis->get($name));
+        $jsonCache = json_decode($arrCache[0]);
+        $back = time() - $jsonCache->dt;
+        if ($back > 10800) return false; else return true;
     }
 
     protected function saveCity($name, $res)
